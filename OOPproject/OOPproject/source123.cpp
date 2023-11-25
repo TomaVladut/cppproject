@@ -13,7 +13,10 @@ class CommandProcessor {
 public:
     static const int MIN_COMMAND_SIZE = 5;
 
-    CommandProcessor() : commandString(nullptr) {}
+    CommandProcessor() {
+        this->commandString = new char[1];
+        strcpy_s(commandString, 1, "");
+    }
 
     CommandProcessor(const char* initialCommand) {
         if (strlen(initialCommand) >= MIN_COMMAND_SIZE) {
@@ -25,7 +28,7 @@ public:
         }
     }
 
-    CommandProcessor(const CommandProcessor& other) {
+    CommandProcessor(CommandProcessor& other) {
         this->commandString = new char[strlen(other.commandString) + 1];
         strcpy_s(this->commandString, strlen(other.commandString) + 1, other.commandString);
     }
@@ -92,7 +95,7 @@ public:
     }
 
     void ExecuteCommand() {
-        std::cout << "Executing command: " << commandString << std::endl;
+        std::cout << std::endl << "Executing command: " << commandString;
         // I will parse all the commands and execute specific tasks after validations and 
         // using methods, but right now I do not feel like I possess the necassary knowledge
     }
@@ -123,10 +126,10 @@ int main()
         cmd3.IdentifyCommandType();
         cmd3.ValidateCommand();
 
-        std::cout << "\nCommand Info:" << std::endl;
+       
         cmd3.DisplayCommandInfo();
 
-        std::cout << "\nExecuting Commands:" << std::endl;
+       
         cmd3.ExecuteCommand();
 
     }
