@@ -5,7 +5,7 @@
 #include <string.h>
 
 class CommandProcessor {
-    char* commandString;
+    char* commandString = nullptr;
     static const int COMMAND_TYPES_COUNT = 9;
     const char* commandTypes[COMMAND_TYPES_COUNT] = { "CREATE TABLE", "CREATE INDEX", "DROP TABLE",
     "DROP INDEX", "DISPLAY TABLE", "INSERT", "SELECT", "UPDATE", "DELETE" };
@@ -117,8 +117,8 @@ public:
 };
 
 class ColumnDefinition {
-    char* columnName;
-    char* dataType;
+    char* columnName = nullptr;
+    char* dataType = nullptr;
 
 public:
     void SetColumnName(const char* name)
@@ -165,10 +165,16 @@ public:
         delete[] this->dataType;
         delete[] this->columnName;
     }
+
+    ColumnDefinition(const ColumnDefinition& object)
+    {
+        this->SetColumnName(object.columnName);
+        this->SetDataType(object.dataType);
+    }
 };
 
 class TableCreator {
-    char* tableName;
+    char* tableName = nullptr;
     static const int MAX_COLUMNS = 10;
     ColumnDefinition columnDefinitions[MAX_COLUMNS];
     int numColumns = 0;
@@ -202,9 +208,10 @@ public:
         return valueOfTableName;
     }
 
-    ColumnDefinition* GetColumnDefinitions()
+    ColumnDefinition GetColumnDefinitions()
     {
-        return columnDefinitions;
+        ColumnDefinition copy;
+        return copy;
     }
 
     void CreateTable()
@@ -231,6 +238,11 @@ public:
 
     ~TableCreator() {
         delete[] tableName;
+    }
+
+    TableCreator(const TableCreator& object)
+    {
+        this->SetTableName(object.tableName);
     }
 };
 
