@@ -108,6 +108,57 @@ public:
 
 };
 
+class ColumnDefinition {
+    char* columnName;
+    char* dataType;
+
+public:
+    void SetColumnName(const char* name)
+    {
+        delete[] this->columnName;
+        columnName = new char[strlen(name) + 1];
+        strcpy_s(columnName, strlen(name) + 1, name);
+    }
+
+    void SetDataType(const char* type)
+    {
+        delete[] this->dataType;
+        dataType = new char[strlen(type) + 1];
+        strcpy_s(dataType, strlen(type) + 1, type);
+    }
+
+    char* GetColumnName()
+    {
+        char* valueOfColumnName = new char[strlen(this->columnName) + 1];
+        strcpy_s(valueOfColumnName, strlen(this->columnName) + 1, this->columnName);
+        return valueOfColumnName;
+    }
+
+    char* GetDataType()
+    {
+        char* valueOfDataType = new char[strlen(this->dataType) + 1];
+        strcpy_s(valueOfDataType, strlen(this->dataType) + 1, dataType);
+        return valueOfDataType;
+    }
+
+    ColumnDefinition(const char* name, const char* type)
+    {
+        this->SetColumnName(name);
+        this->SetDataType(type);
+    }
+
+    ~ColumnDefinition()
+    {
+        delete[] this->dataType;
+        delete[] this->columnName;
+    }
+};
+
+class TableCreator {
+    char* tableName;
+    static const int MAX_COLUMNS = 10;
+};
+
 int main()
 {
     try {
