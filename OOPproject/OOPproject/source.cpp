@@ -3,6 +3,137 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <exception>
+
+enum RelationType{ UNDEFINED, ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE };
+
+class Database
+{
+    //std::string tableName = "";
+    std::string* tables = nullptr;
+    int noTables=0;
+    RelationType linkType = RelationType::UNDEFINED;
+
+public:
+    static const int MIN_NO_TABLES = 1;
+    static const int MIN_TABLE_NAME_LENGHT = 3;
+
+public:
+    //getters
+    std::string* getTables()
+    {
+       std::string* copy = new std::string[this->noTables];
+        for (int i = 0; i < this->noTables; i++)
+        {
+            copy[i] = this->tables[i];
+        }
+        return copy;
+        return tables;
+    }
+
+    int getNoTables()
+    {
+        return this->noTables;
+    }
+
+    RelationType getRelationType()
+    {
+        return this->linkType;
+    }
+
+    //setters
+    void setTables(std::string* tablesArray, int noTables)
+    {
+        if (this->tables != nullptr)
+        {
+            delete[] this->tables;
+        }
+        if (noTables < this->MIN_NO_TABLES)
+        {
+            throw std::exception("No tables were sent.");
+        }
+        if (tablesArray->length() < MIN_TABLE_NAME_LENGHT)
+        {
+            throw std::exception("Table name is too short. ");
+        }
+
+        this->tables = new std::string[noTables];
+        for (int i = 0; i < noTables; i++)
+        {
+            this->tables[i] = tablesArray[i];
+        }
+        this->noTables = noTables;
+    }
+
+    void setRelationType(RelationType type)
+    {
+        this->linkType = type;
+    }
+
+    std::string showRelationType()
+    {
+        switch (this->linkType)
+        {
+        case UNDEFINED:
+            return "UNDEFINED";
+        case ONE_TO_ONE:
+            return "ONE_TO_ONE";
+        case ONE_TO_MANY:
+            return "ONE_TO_MANY";
+        case MANY_TO_ONE:
+            return"MANY_TO_ONE";
+        }
+    }
+
+    //constructors
+    Database()
+    {
+
+    }
+
+    Database(std::string* tables, int noTables) :linkType(UNDEFINED)
+    {
+        this->setTables(tables, noTables);
+    }
+
+    //copy ctr
+    Database(const Database& object)
+    {
+        this->tables = new std::string[object.noTables];
+        for (int i = 0; i < object.noTables; i++)
+        {
+            this->tables[i] = object.tables[i];
+        }
+        this->noTables = object.noTables;
+        this->linkType = object.linkType;
+    }
+
+    //destructor
+    ~Database()
+    {
+        delete[] this->tables;
+    }
+
+    //methods
+    void displayDatabaseInfo()
+    {
+        if (this->tables->length() > MIN_TABLE_NAME_LENGHT && this->noTables > MIN_NO_TABLES)
+        {
+            std::cout << "There are " << this->noTables << " tables. "<<std::endl;
+            for (int i = 0; i < this->noTables; i++)
+                std::cout << "Table: " << this->tables[i] << std::endl;
+        }
+        else std::cout << "There are no tables." << std::endl;
+        std::cout << "Relation type: "<< this->showRelationType()<<std::endl;
+    }
+
+    //after consulting multilple internet sources i don t think i have the necessary knowledge to implement this method yet 
+    void establishRelation(const std::string table1, const std::string table2, RelationType type)
+    {
+
+    }
+};
+
 
 class CommandProcessor {
     char* commandString = nullptr;
@@ -372,6 +503,43 @@ int main()
     catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
+
+
+
+    Database myDatabase;
+    
+    int noTables;
+    std::cout << std::endl<< "Number of tables for the database: ";
+    std::cin >> noTables;
+ 
+        std::string* tables = new std::string[noTables];
+        for (int i = 0; i < noTables; i++)
+        {
+            std::cout << "add a table: ";
+            std::cin >> tables[i];
+        }
+        std::cout << std::endl;
+    try {
+         
+        //test set and get methods
+        /*myDatabase.setTables(tables, noTables);
+        std::string* retrievedTables = myDatabase.getTables();
+        for (int i = 0; i < myDatabase.getNoTables(); i++) {
+            std::cout << "Table " << i + 1 << ": " << retrievedTables[i] << std::endl;
+        }*/
+
+        Database db(tables, noTables);
+        db.displayDatabaseInfo();
+        }
+    catch (const std::exception& e)
+    {
+        std::cerr<< "Error: " << e.what() << std::endl;
+    }
+    //test set get and show for enum
+    /* myDatabase.setRelationType(ONE_TO_MANY);
+    std::cout<<myDatabase.getRelationType();
+    std::cout<<myDatabase.showRelationType()<<std::endl;*/
+
 
     return 0;
 }
