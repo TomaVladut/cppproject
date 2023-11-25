@@ -246,6 +246,88 @@ public:
     }
 };
 
+class QueryBuilder
+{
+    std::string queryString = "";
+    static const int MAX_COLUMNS = 10;
+    char* selectedColumns[MAX_COLUMNS] = { 0 };
+    int numColumns = 0;
+
+public:
+    static const int MIN_QUERY_SIZE = 4;
+    void SetQueryString(std::string newQueryString)
+    {
+        if (newQueryString.size() < MIN_QUERY_SIZE)
+            throw std::exception("Query too short");
+        this->queryString = newQueryString;
+    }
+
+    void SetSelectedColumns(const char* columnName)
+    {
+        if (this->numColumns < MAX_COLUMNS)
+        {
+            this->selectedColumns[numColumns] = new char[strlen(columnName) + 1];
+            strcpy_s(this->selectedColumns[numColumns], strlen(columnName) + 1, columnName);
+            ++numColumns;
+        }
+        else
+        {
+            std::cerr << std::endl << "Max number of selected columns reached";
+        }
+    }
+
+    std::string GetQueryString()
+    {
+        return this->queryString;
+    }
+
+    char* GetSelectedColumns()
+    {
+        char* valueOfSelectedColumns = new char[strlen(this->selectedColumns[numColumns]) + 1];
+        strcpy_s(valueOfSelectedColumns, strlen(this->selectedColumns[numColumns] + 1), this->selectedColumns[numColumns]);
+        return valueOfSelectedColumns;
+    }
+
+    void BuildQuery()
+    {
+        std::cout << std::endl << std::endl << "Building query: " << this->queryString;
+        std::cout << std::endl << "Selected Columns: ";
+        for (int i = 0; i < this->numColumns; ++i) {
+            std::cout << this->selectedColumns[i] << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    void DisplayQueryInfo()
+    {
+        std::cout << std::endl << std::endl << "Query Info:";
+        std::cout << std::endl << "Query String: " << this->queryString;
+        std::cout << std::endl << "Number of Selected Columns: " << this->numColumns;
+        std::cout << std::endl;
+    }
+
+    QueryBuilder()
+    {
+
+    }
+
+    ~QueryBuilder()
+    {
+        for (int i = 0; i < this->numColumns; ++i) {
+            delete[] this->selectedColumns[i];
+        }
+    }
+
+    QueryBuilder(QueryBuilder& other) {
+        this->queryString = other.queryString;
+        this->numColumns = other.numColumns;
+        for (int i = 0; i < this->numColumns; ++i) {
+            this->selectedColumns[i] = new char[strlen(other.selectedColumns[i]) + 1];
+            strcpy_s(this->selectedColumns[i], strlen(other.selectedColumns[i]) + 1, other.selectedColumns[i]);
+        }
+    }
+};
+
 
 int main()
 {
@@ -259,32 +341,37 @@ int main()
         std::cout << "cmd2: " << cmd2.GetCommandString() << std::endl;
         std::cout << "cmd3: " << (cmd3.GetCommandString() ? cmd3.GetCommandString() : "Empty Command") << std::endl;
 
-        std::cout << "\nModified Commands:" << std::endl;
-
         cmd3.SetCommandString("SELECT * FROM products;");
         cmd3.IdentifyCommandType();
         cmd3.ValidateCommand();
-
-
         cmd3.DisplayCommandInfo();
-
-
         cmd3.ExecuteCommand();
 
+        TableCreator myTable;
+        myTable.SetTableName("ExampleTable");
+        myTable.SetColumnDefinitions("Column1", "INT");
+        myTable.SetColumnDefinitions("Column2", "VARCHAR");
+
+        myTable.CreateTable();
+        myTable.DisplayTableInfo();
+
+        QueryBuilder myQuery;
+        myQuery.SetQueryString("SELECT");
+        myQuery.SetSelectedColumns("Column1");
+        myQuery.SetSelectedColumns("Column2");
+
+        myQuery.BuildQuery();
+        myQuery.DisplayQueryInfo();
+        myQuery.SetQueryString("INSERT");
+
+        QueryBuilder myQueryCopy(myQuery);
+        std::cout << "\nCopied Query:";
+        myQueryCopy.BuildQuery();
+        myQueryCopy.DisplayQueryInfo();
     }
     catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
-
-    TableCreator myTable;
-
-    myTable.SetTableName("ExampleTable");
-    myTable.SetColumnDefinitions("Column1", "INT");
-    myTable.SetColumnDefinitions("Column2", "VARCHAR");
-
-    myTable.CreateTable();
-    myTable.DisplayTableInfo();
-
 
     return 0;
 }
