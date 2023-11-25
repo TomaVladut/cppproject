@@ -116,6 +116,125 @@ public:
 
 };
 
+class ColumnDefinition {
+    char* columnName;
+    char* dataType;
+
+public:
+    void SetColumnName(const char* name)
+    {
+        delete[] this->columnName;
+        columnName = new char[strlen(name) + 1];
+        strcpy_s(this->columnName, strlen(name) + 1, name);
+    }
+
+    void SetDataType(const char* type)
+    {
+        delete[] this->dataType;
+        dataType = new char[strlen(type) + 1];
+        strcpy_s(this->dataType, strlen(type) + 1, type);
+    }
+
+    char* GetColumnName()
+    {
+        char* valueOfColumnName = new char[strlen(this->columnName) + 1];
+        strcpy_s(valueOfColumnName, strlen(this->columnName) + 1, this->columnName);
+        return valueOfColumnName;
+    }
+
+    char* GetDataType()
+    {
+        char* valueOfDataType = new char[strlen(this->dataType) + 1];
+        strcpy_s(valueOfDataType, strlen(this->dataType) + 1, dataType);
+        return valueOfDataType;
+    }
+
+    ColumnDefinition(const char* name, const char* type)
+    {
+        this->SetColumnName(name);
+        this->SetDataType(type);
+    }
+
+    ColumnDefinition()
+    {
+
+    }
+
+    ~ColumnDefinition()
+    {
+        delete[] this->dataType;
+        delete[] this->columnName;
+    }
+};
+
+class TableCreator {
+    char* tableName;
+    static const int MAX_COLUMNS = 10;
+    ColumnDefinition columnDefinitions[MAX_COLUMNS];
+    int numColumns = 0;
+
+public:
+    void SetTableName(const char* newTableName)
+    {
+        delete[] this->tableName;
+        tableName = new char[strlen(newTableName) + 1];
+        strcpy_s(this->tableName, strlen(newTableName) + 1, newTableName);
+    }
+
+    void SetColumnDefinitions(const char* columnName, const char* dataType)
+    {
+        if (numColumns < MAX_COLUMNS)
+        {
+            this->columnDefinitions[numColumns].SetColumnName(columnName);
+            this->columnDefinitions[numColumns].SetDataType(dataType);
+            ++numColumns;
+        }
+        else
+        {
+            std::cerr << std::endl << "Error: Max columns already reached.";
+        }
+    }
+
+    char* GetTableName()
+    {
+        char* valueOfTableName = new char[strlen(this->tableName) + 1];
+        strcpy_s(valueOfTableName, strlen(this->tableName) + 1, this->tableName);
+        return valueOfTableName;
+    }
+
+    ColumnDefinition* GetColumnDefinitions()
+    {
+        return columnDefinitions;
+    }
+
+    void CreateTable()
+    {
+        std::cout << std::endl << std::endl << "Creating table: " << this->tableName;
+        std::cout << std::endl << std::endl << "Column Definitions:";
+        for (int i = 0; i < this->numColumns; ++i) {
+            std::cout << std::endl << "Column Name: " << this->columnDefinitions[i].GetColumnName()
+                << ", Data Type: " << this->columnDefinitions[i].GetDataType();
+        }
+    }
+
+    void DisplayTableInfo()
+    {
+        std::cout << std::endl << std::endl << "Table Info:";
+        std::cout << std::endl << "Table Name: " << this->tableName;
+        std::cout << std::endl << "Number of Columns: " << this->numColumns;
+    }
+
+    TableCreator()
+    {
+
+    }
+
+    ~TableCreator() {
+        delete[] tableName;
+    }
+};
+
+
 int main()
 {
     try {
@@ -144,6 +263,16 @@ int main()
     catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
+
+    TableCreator myTable;
+
+    myTable.SetTableName("ExampleTable");
+    myTable.SetColumnDefinitions("Column1", "INT");
+    myTable.SetColumnDefinitions("Column2", "VARCHAR");
+
+    myTable.CreateTable();
+    myTable.DisplayTableInfo();
+
 
     return 0;
 }
