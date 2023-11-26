@@ -16,7 +16,7 @@ class Database
 
 public:
     static const int MIN_NO_TABLES = 1;
-    static const int MIN_TABLE_NAME_LENGHT = 3;
+    static const int MIN_TABLE_NAME_LENGTH = 3;
 
 public:
     //getters
@@ -52,7 +52,7 @@ public:
         {
             throw std::exception("No tables were sent.");
         }
-        if (tablesArray->length() < MIN_TABLE_NAME_LENGHT)
+        if (tablesArray->length() < MIN_TABLE_NAME_LENGTH)
         {
             throw std::exception("Table name is too short. ");
         }
@@ -117,7 +117,7 @@ public:
     //methods
     void displayDatabaseInfo()
     {
-        if (this->tables->length() > MIN_TABLE_NAME_LENGHT && this->noTables > MIN_NO_TABLES)
+        if (this->tables->length() > MIN_TABLE_NAME_LENGTH && this->noTables > MIN_NO_TABLES)
         {
             std::cout << "There are " << this->noTables << " tables. "<<std::endl;
             for (int i = 0; i < this->noTables; i++)
@@ -134,6 +134,115 @@ public:
     }
 };
 
+class IndexManager
+{
+    std::string indexName = "";
+    int* indexedColumns = nullptr;
+    int noColumns = 0;
+
+public:
+    const int MIN_INDEXED_COLUMNS = 1;
+    const int MIN_INDEX_NAME_LENGTH = 2;
+
+    //getters
+
+    std::string getIndexName()
+    {
+        return this->indexName;
+    }
+
+    int getNoColumns()
+    {
+        
+        return this->noColumns;
+    }
+
+    int* getIndexedColumns()
+    {
+        if (this->indexedColumns == nullptr && this->noColumns < MIN_INDEXED_COLUMNS)
+        {
+            return nullptr;
+        }
+
+        int* copy = new int[this->noColumns];
+        for (int i = 0; i < this->noColumns; i++)
+        {
+            copy[i] = this->indexedColumns[i];
+        }
+        return copy;
+    }
+
+    //setters
+    void setIndexName(std::string name)
+    {
+        if (name.length() < MIN_INDEX_NAME_LENGTH)
+        {
+            throw std::exception("Index name has to have at least 3 characters");
+        }
+        this->indexName = name;
+    }
+
+    void setIndexedColumns(int* indexedColumns, int noColumns)
+    {
+        if (this->indexedColumns != nullptr)
+            delete[] this->indexedColumns;
+        if (noColumns < MIN_INDEXED_COLUMNS)
+        {
+            throw std::exception("No columns were passed.");
+        }
+
+        this->indexedColumns = new int[noColumns];
+        for (int i = 0; i < noColumns; i++)
+        {
+            this->indexedColumns[i] = indexedColumns[i];
+        }
+        this->noColumns = noColumns;
+    }
+
+    //Constructors
+    IndexManager()
+    {
+
+    }
+
+    IndexManager(std::string newIndexName, int* indexColumns, int newNoColumns) :indexName(newIndexName)
+    {
+        this->setIndexedColumns(indexColumns, newNoColumns);
+    }
+
+    //copy ctr
+    IndexManager(const IndexManager& object) :indexName(object.indexName)
+    {
+        this->setIndexedColumns(object.indexedColumns, object.noColumns);
+    }
+
+    //destructor
+    ~IndexManager()
+    {
+        delete[] this->indexedColumns;
+    }
+
+    //methods
+    void displayIndexInfo()
+    {
+        if (this->indexName.length() > MIN_INDEX_NAME_LENGTH)
+            std::cout << "Index Name: " << this->indexName << std::endl;
+        else throw std::exception("Index name has to have at least 3 characters");
+
+        if (this->indexedColumns != nullptr && this->noColumns != 0)
+        {
+            std::cout << "Number of columns: " << this->noColumns << std::endl;
+            std::cout << "Indices used: ";
+            for (int i = 0; i < this->noColumns; i++)
+            {
+                std::cout << this->indexedColumns[i] << " ";
+            }
+        }
+        else throw std::exception("No columns were passed.");
+    }
+
+};
+    
 
 class CommandProcessor {
     char* commandString = nullptr;
@@ -539,6 +648,33 @@ int main()
     /* myDatabase.setRelationType(ONE_TO_MANY);
     std::cout<<myDatabase.getRelationType();
     std::cout<<myDatabase.showRelationType()<<std::endl;*/
+
+    IndexManager myIndex;
+    try {
+        myIndex.setIndexName("Salary");
+        std::cout << myIndex.getIndexName() << std::endl;
+
+        int noColumns = 3;
+        int indices[] = { 2,3,5 };
+        myIndex.setIndexedColumns(indices, noColumns);
+        std::cout << "Number of Columns:" << myIndex.getNoColumns() << std::endl;
+
+        int* retrieveColumns = myIndex.getIndexedColumns();
+        for (int i = 0; i < noColumns; i++)
+        {
+            std::cout << retrieveColumns[i] << " ";
+        }
+
+        delete[] retrieveColumns;
+        std::cout << std::endl;
+
+        IndexManager newIndex("Salary", indices, noColumns);
+        newIndex.displayIndexInfo();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
 
 
     return 0;
