@@ -226,7 +226,7 @@ public:
     void displayIndexInfo()
     {
         if (this->indexName.length() > MIN_INDEX_NAME_LENGTH)
-            std::cout << "Index Name: " << this->indexName << std::endl;
+            std::cout << std::endl << "Index Name: " << this->indexName << std::endl;
         else throw std::exception("Index name has to have at least 3 characters");
 
         if (this->indexedColumns != nullptr && this->noColumns != 0)
@@ -241,6 +241,119 @@ public:
         else throw std::exception("No columns were passed.");
     }
 
+    void addIndex(int newIndex)
+    {
+        if (newIndex < 1)
+        {
+            throw std::exception("Invalid index number was introduced.");
+        }
+        int* copy = new int[this->noColumns + 1];
+        for (int i = 0; i < this->noColumns; i++)
+        {
+            copy[i] = this->indexedColumns[i];
+        }
+        copy[this->noColumns] = newIndex;
+        delete[] this->indexedColumns;
+        indexedColumns = copy;
+
+        this->noColumns++;
+    }
+
+    void subtractIndex(int index)
+    {
+        bool found = false;
+        int subtract = 0;
+        for (int i = 0; i < this->noColumns; i++)
+        {
+            if (this->indexedColumns[i] == index)
+            {
+                found = true;
+                subtract = i;
+                break;
+            }
+        }
+        if (!found)
+        {
+            throw std::exception("This index does not exist.");
+        }
+
+        // Checked if there's only one element and handled separately
+        if (this->noColumns == 1)
+        {
+            delete[] this->indexedColumns;
+            this->indexedColumns = nullptr;
+            this->noColumns = 0;
+            return;
+        }
+
+        int* copy = new int[this->noColumns-1];
+        //int j = 0;
+        for (int i = 0, j = 0; i < this->noColumns; i++)
+        {
+            if (i != subtract)
+            {
+                copy[j++] = this->indexedColumns[i];
+                //j++;
+            }
+
+        }
+        delete[] this->indexedColumns;
+        this->indexedColumns = copy;
+
+        this->noColumns--;
+    }
+};
+
+class numericalDataManipulator
+{
+    std::string columnName = "";
+    float* dataValues=nullptr;
+    int noValues;
+
+public:
+
+    //getters
+    std::string getColumnName()
+    {
+        return this->columnName;
+    }
+
+    float* getDataValues()
+    {
+        float* copy = new float[this->noValues];
+        for (int i = 0; i < this->noValues; i++)
+        {
+            copy[i] = this->dataValues[i];
+        }
+        return copy;
+    }
+
+    int getNoValues()
+    {
+        return this->noValues;
+    }
+
+    //setters
+    void setColumnName(std::string name)
+    {
+        this->columnName = name;
+    }
+
+    void setDataValues(float* data, int noInputs)
+    {
+        if (this->dataValues != nullptr)
+        {
+            delete[] this->dataValues;
+        }
+
+        this->dataValues = new float[noInputs];
+        for (int i = 0; i < this->noValues; i++)
+        {
+            this->dataValues[i] = data[i];
+        }
+
+        this->noValues = noInputs;
+    }
 };
     
 
@@ -670,6 +783,12 @@ int main()
 
         IndexManager newIndex("Salary", indices, noColumns);
         newIndex.displayIndexInfo();
+
+        newIndex.addIndex(8);
+        newIndex.displayIndexInfo();
+        newIndex.subtractIndex(11);
+        newIndex.displayIndexInfo();
+
     }
     catch (const std::exception& e)
     {
