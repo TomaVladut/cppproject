@@ -186,6 +186,7 @@ public:
     {
         if (this->indexedColumns != nullptr)
             delete[] this->indexedColumns;
+
         if (noColumns < MIN_INDEXED_COLUMNS)
         {
             throw std::exception("No columns were passed.");
@@ -310,6 +311,9 @@ class numericalDataManipulator
     float* dataValues=nullptr;
     int noValues;
 
+    static const int MIN_NAME_LENGHT = 2;
+    static const int MIN_NO_INPUTS = 1;
+
 public:
 
     //getters
@@ -336,6 +340,10 @@ public:
     //setters
     void setColumnName(std::string name)
     {
+        if (name.length() < MIN_NAME_LENGHT)
+        {
+            throw std::exception("The column name must have at least 2 characters.");
+        }
         this->columnName = name;
     }
 
@@ -346,6 +354,11 @@ public:
             delete[] this->dataValues;
         }
 
+        if (noInputs < MIN_NO_INPUTS)
+        {
+            throw std::exception("There were no inputs passed on.");
+        }
+
         this->dataValues = new float[noInputs];
         for (int i = 0; i < this->noValues; i++)
         {
@@ -353,6 +366,112 @@ public:
         }
 
         this->noValues = noInputs;
+    }
+
+    //constructor
+    numericalDataManipulator()
+    {
+
+    }
+
+    numericalDataManipulator(std::string columnName, float* dataValues, int noValues): columnName(columnName)
+    {
+        this->setDataValues(dataValues, noValues);
+    }
+
+    //copyctr
+    numericalDataManipulator(const numericalDataManipulator& object): columnName(object.columnName)
+    {
+        this->setDataValues(object.dataValues, object.noValues);
+    }
+
+    //destructor
+    ~numericalDataManipulator()
+    {
+        delete[] this->dataValues;
+    }
+
+    //methods
+    float maxValue(float* data, int noInputs)
+    {
+        if (data == nullptr || noInputs < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        float max = data[0];
+        for (int i = 1; i < noInputs; i++)
+        {
+            if (data[i] > max)
+                max = data[i];
+        }
+        return max;
+    }
+
+    float minPrice(float* data, int noInputs)
+    {
+        if (data == nullptr || noInputs < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        float min = data[0];
+        for (int i = 1; i < noInputs; i++)
+        {
+            if (data[i] < min)
+                min = data[i];
+        }
+        return min;
+    }
+
+    void ascendingOrder(float* data, int first, int last)
+    {
+        int noInputs = last + 1;
+        if (data == nullptr || noInputs < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+        if (first < last)
+        {
+            float pivot = data[last];
+            int i = first - 1;
+
+            for (int j = first; j < last; j++)
+            {
+                if (data[j] <= pivot)
+                {
+                    i++;
+                    std::swap(data[i], data[j]);
+                }
+            }            
+            std::swap(data[last], data[i + 1]);
+            
+            ascendingOrder(data, first, i);
+            ascendingOrder(data, i + 2, last);
+        }
+    }
+
+    void descendingOrder(float* data, int first, int last)
+    {
+        if (first < last)
+        {
+            int pivot = data[last];
+            int i = first - 1;
+
+            for (int j = first; j < last; j++)
+            {
+                if (data[j] >= pivot)
+                {
+                    i++;
+                    std::swap(data[j], data[i]);
+                }
+            }
+
+            std::swap(data[i + 1], data[last]);
+
+            descendingOrder(data, first, i);
+            descendingOrder(data, i + 2, last);
+        }
     }
 };
     
@@ -794,7 +913,30 @@ int main()
     {
         std::cerr << "Error: " << e.what() << std::endl;
     }
-
-
+    
+    try 
+    {
+        numericalDataManipulator Price;
+        float testData[] = { 14.2, 3.5, 7, 8.9 };
+        float maxPrice = Price.maxValue(testData, 4);
+        std::cout << std::endl << maxPrice;
+        float minPrice = Price.minPrice(testData, 4);
+        std::cout << std::endl << minPrice << std::endl;
+        Price.ascendingOrder(testData, 0, 3);
+        for (int i = 0; i < 4; i++)
+        {
+            std::cout << testData[i] << " ";
+        }
+        std::cout << std::endl;
+        Price.descendingOrder(testData, 0, 3);
+        for (int i = 0; i < 4; i++)
+        {
+            std::cout << testData[i] << " ";
+        }
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
     return 0;
 }
