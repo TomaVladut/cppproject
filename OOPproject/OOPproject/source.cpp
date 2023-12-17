@@ -132,6 +132,22 @@ public:
     {
 
     }
+
+    //operators
+    Database operator=(const Database source)
+    {
+        if (&source == this)
+        {
+            return *this;
+        }
+        else
+        {
+            this->linkType = source.linkType;
+            this->setTables(source.tables, source.noTables);
+        }
+        return *this;
+    }
+
 };
 
 class IndexManager
@@ -141,8 +157,8 @@ class IndexManager
     int noColumns = 0;
 
 public:
-    const int MIN_INDEXED_COLUMNS = 1;
-    const int MIN_INDEX_NAME_LENGTH = 2;
+    static const int MIN_INDEXED_COLUMNS = 1;
+    static const int MIN_INDEX_NAME_LENGTH = 2;
 
     //getters
 
@@ -303,9 +319,25 @@ public:
 
         this->noColumns--;
     }
+
+    //operators
+    IndexManager operator=(const IndexManager source)
+    {
+        if (&source == this)
+        {
+            return *this;
+        }
+        else
+        {
+            this->setIndexName(source.indexName);
+            this->setIndexedColumns(source.indexedColumns, source.noColumns);
+        }
+        return *this;
+    }
+
 };
 
-class numericalDataManipulator
+class NumericalDataManipulator
 {
     std::string columnName = "";
     float* dataValues=nullptr;
@@ -360,7 +392,7 @@ public:
         }
 
         this->dataValues = new float[noInputs];
-        for (int i = 0; i < this->noValues; i++)
+        for (int i = 0; i < noInputs; i++)
         {
             this->dataValues[i] = data[i];
         }
@@ -369,109 +401,153 @@ public:
     }
 
     //constructor
-    numericalDataManipulator()
+    NumericalDataManipulator()
     {
 
     }
 
-    numericalDataManipulator(std::string columnName, float* dataValues, int noValues): columnName(columnName)
+    NumericalDataManipulator(std::string columnName)
+    {
+        this->setColumnName(columnName);
+    }
+
+    NumericalDataManipulator(std::string columnName, float* dataValues, int noValues): columnName(columnName)
     {
         this->setDataValues(dataValues, noValues);
     }
 
     //copyctr
-    numericalDataManipulator(const numericalDataManipulator& object): columnName(object.columnName)
+    NumericalDataManipulator(const NumericalDataManipulator& object): columnName(object.columnName)
     {
         this->setDataValues(object.dataValues, object.noValues);
     }
 
     //destructor
-    ~numericalDataManipulator()
+    ~NumericalDataManipulator()
     {
         delete[] this->dataValues;
     }
 
     //methods
-    float maxValue(float* data, int noInputs)
+    float maxValue()
     {
-        if (data == nullptr || noInputs < MIN_NO_INPUTS)
+        if (this->dataValues == nullptr || this->noValues < MIN_NO_INPUTS)
         {
             throw std::exception("No data was passed.");
         }
 
-        float max = data[0];
-        for (int i = 1; i < noInputs; i++)
+        float max = this->dataValues[0];
+        for (int i = 1; i < this->noValues; i++)
         {
-            if (data[i] > max)
-                max = data[i];
+            if (this->dataValues[i] > max)
+                max = this->dataValues[i];
         }
         return max;
     }
 
-    float minPrice(float* data, int noInputs)
+    float minValue()
     {
-        if (data == nullptr || noInputs < MIN_NO_INPUTS)
+        if (this->dataValues == nullptr || this->noValues < MIN_NO_INPUTS)
         {
             throw std::exception("No data was passed.");
         }
 
-        float min = data[0];
-        for (int i = 1; i < noInputs; i++)
+        float min = this->dataValues[0];
+        for (int i = 1; i < this->noValues; i++)
         {
-            if (data[i] < min)
-                min = data[i];
+            if (this->dataValues[i] < min)
+                min = this->dataValues[i];
         }
         return min;
     }
 
-    void ascendingOrder(float* data, int first, int last)
+    void displayNumericalData()
     {
-        int noInputs = last + 1;
-        if (data == nullptr || noInputs < MIN_NO_INPUTS)
+        std::cout << std::endl << "Column name: " << this->columnName<<std::endl;
+        std::cout << "The values are: ";
+        for (int i = 0; i < this->noValues; i++)
         {
-            throw std::exception("No data was passed.");
-        }
-        if (first < last)
-        {
-            float pivot = data[last];
-            int i = first - 1;
-
-            for (int j = first; j < last; j++)
-            {
-                if (data[j] <= pivot)
-                {
-                    i++;
-                    std::swap(data[i], data[j]);
-                }
-            }            
-            std::swap(data[last], data[i + 1]);
-            
-            ascendingOrder(data, first, i);
-            ascendingOrder(data, i + 2, last);
+            std::cout << this->dataValues[i] << " ";
         }
     }
 
-    void descendingOrder(float* data, int first, int last)
+    void ascendingOrder()
+    {
+        if (this->dataValues == nullptr || this->noValues < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        ascendingOrderRecursive(0, this->noValues - 1);
+    }
+    
+    void ascendingOrderRecursive(int first, int last)
     {
         if (first < last)
         {
-            int pivot = data[last];
+            float pivot = this->dataValues[last];
             int i = first - 1;
 
             for (int j = first; j < last; j++)
             {
-                if (data[j] >= pivot)
+                if (this->dataValues[j] <= pivot)
                 {
                     i++;
-                    std::swap(data[j], data[i]);
+                    std::swap(this->dataValues[i], this->dataValues[j]);
                 }
             }
 
-            std::swap(data[i + 1], data[last]);
+            std::swap(this->dataValues[last], this->dataValues[i + 1]);
 
-            descendingOrder(data, first, i);
-            descendingOrder(data, i + 2, last);
+            ascendingOrderRecursive(first, i);
+            ascendingOrderRecursive(i + 2, last);
         }
+    }
+
+    void descendingOrder()
+    {
+        if (this->dataValues == nullptr && this->noValues < this->MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        descendingOrderRecursive(0, this->noValues-1);
+    }
+
+    void descendingOrderRecursive(int first, int last)
+    {
+        if (first < last)
+        {
+            float pivot = this->dataValues[last];
+            int i = first - 1;
+            for (int j = first; j < last; j++)
+            {
+                if (this->dataValues[j] >= pivot)
+                {
+                    i++;
+                    std::swap(this->dataValues[i],this->dataValues[j]);
+                }
+            }
+            std::swap(this->dataValues[i+1],this->dataValues[last]);
+
+            descendingOrderRecursive(first, i);
+            descendingOrderRecursive(i + 2, last);
+        }
+    }
+
+    //operators
+    NumericalDataManipulator operator=(const NumericalDataManipulator source)
+    {
+        if (&source == this)
+        {
+            return *this;
+        }
+        else
+        {
+            this->setColumnName(source.columnName);
+            this->setDataValues(source.dataValues, source.noValues);
+        }
+        return *this;
     }
 };
     
@@ -871,6 +947,9 @@ int main()
 
         Database db(tables, noTables);
         db.displayDatabaseInfo();
+        std::cout << "----------------------------------------------------"<<std::endl;
+        myDatabase = db;
+        myDatabase.displayDatabaseInfo();
         }
     catch (const std::exception& e)
     {
@@ -891,13 +970,13 @@ int main()
         myIndex.setIndexedColumns(indices, noColumns);
         std::cout << "Number of Columns:" << myIndex.getNoColumns() << std::endl;
 
-        int* retrieveColumns = myIndex.getIndexedColumns();
+        int* retrievedColumns = myIndex.getIndexedColumns();
         for (int i = 0; i < noColumns; i++)
         {
-            std::cout << retrieveColumns[i] << " ";
+            std::cout << retrievedColumns[i] << " ";
         }
 
-        delete[] retrieveColumns;
+        delete[] retrievedColumns;
         std::cout << std::endl;
 
         IndexManager newIndex("Salary", indices, noColumns);
@@ -905,38 +984,38 @@ int main()
 
         newIndex.addIndex(8);
         newIndex.displayIndexInfo();
-        newIndex.subtractIndex(11);
+        newIndex.subtractIndex(2);
         newIndex.displayIndexInfo();
 
+        std::cout<<::std::endl << "initial values";
+        myIndex.displayIndexInfo();
+        std::cout << ::std::endl << "new stuff";
+        myIndex = newIndex;
+        myIndex.displayIndexInfo();
     }
     catch (const std::exception& e)
     {
         std::cerr << "Error: " << e.what() << std::endl;
     }
-    
+
     try 
     {
-        numericalDataManipulator Price;
         float testData[] = { 14.2, 3.5, 7, 8.9 };
-        float maxPrice = Price.maxValue(testData, 4);
-        std::cout << std::endl << maxPrice;
-        float minPrice = Price.minPrice(testData, 4);
-        std::cout << std::endl << minPrice << std::endl;
-        Price.ascendingOrder(testData, 0, 3);
-        for (int i = 0; i < 4; i++)
-        {
-            std::cout << testData[i] << " ";
-        }
-        std::cout << std::endl;
-        Price.descendingOrder(testData, 0, 3);
-        for (int i = 0; i < 4; i++)
-        {
-            std::cout << testData[i] << " ";
-        }
+        NumericalDataManipulator price("price", testData, 4);
+        std::cout << price.maxValue() << std::endl;
+        std::cout << price.minValue();
+        price.ascendingOrder();
+        price.displayNumericalData();
+        price.descendingOrder();
+        price.displayNumericalData();
+
+        NumericalDataManipulator test("test");
+        test = price;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Error " << e.what()<<std::endl;
     }
+
     return 0;
 }
