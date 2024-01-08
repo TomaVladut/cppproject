@@ -13,10 +13,13 @@ class Database
     std::string* tables = nullptr;
     int noTables=0;
     RelationType linkType = RelationType::UNDEFINED;
+    std::string** relationsMatrix = nullptr;
+    int noRelations=0;
 
 public:
     static const int MIN_NO_TABLES = 1;
     static const int MIN_TABLE_NAME_LENGTH = 3;
+    static const int NO_COLUMNS_RELATION_MATRIX = 3;
 
 public:
     //getters
@@ -112,6 +115,11 @@ public:
     ~Database()
     {
         delete[] this->tables;
+        for (int i = 0; i < this->noRelations; i++)
+        {
+            delete[] this->relationsMatrix[i];
+        }
+        delete[] this->relationsMatrix;
     }
 
     //methods
@@ -124,13 +132,110 @@ public:
                 std::cout << "Table: " << this->tables[i] << std::endl;
         }
         else std::cout << "There are no tables." << std::endl;
-        std::cout << "Relation type: "<< this->showRelationType()<<std::endl;
+        //std::cout << "Relation type: "<< this->showRelationType()<<std::endl;
+        if (this->relationsMatrix != nullptr && this->noRelations > 0)
+        {
+            for (int i = 0; i < this->noRelations; i++)
+            {
+                std::cout << "The tables " << relationsMatrix[i][0] << " and " << relationsMatrix[i][1] << " have a " << relationsMatrix[i][2] << " relation."<<std::endl;
+            }
+        }
+        else std::cout << "There are no relations established between any of your tables."<<std::endl;
+        std::cout << "----------------------------------------------------" << std::endl;
     }
 
-    //after consulting multilple internet sources i don t think i have the necessary knowledge to implement this method yet 
+    std::string** copyMatrixOfStrings(std::string** matrix, int rows)
+    {
+        std::string** copy = new std::string * [rows];
+        for (int i = 0; i < rows; i++)
+            copy[i] = new std::string[NO_COLUMNS_RELATION_MATRIX];
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < NO_COLUMNS_RELATION_MATRIX; j++)
+                copy[i][j] = matrix[i][j];
+        }
+
+        return copy;
+    }
+
+
+    std::string showRelationType(RelationType type)
+    {
+        switch (type)
+        {
+        case UNDEFINED:
+            return "UNDEFINED";
+        case ONE_TO_ONE:
+            return "ONE_TO_ONE";
+        case ONE_TO_MANY:
+            return "ONE_TO_MANY";
+        case MANY_TO_ONE:
+            return"MANY_TO_ONE";
+        }
+    }
+
+    bool checkTableName(std::string table)
+    {
+        for (int i = 0; i < this->noTables; i++)
+        {
+            if (this->tables[i] == table)
+                return true;
+        }
+        return false;
+    }
+
     void establishRelation(const std::string table1, const std::string table2, RelationType type)
     {
+        if (checkTableName(table1) && checkTableName(table2))
+        {
+            //copy initial matrix in order to preserve it's elements
+            std::string** copy = copyMatrixOfStrings(this->relationsMatrix,this->noRelations);
 
+            //allocate memory for the new matrix
+            this->noRelations++;
+            std::string** newMatrix = new std::string * [this->noRelations];
+            for (int i = 0; i < this->noRelations; i++)
+            {
+                newMatrix[i] = new std::string[NO_COLUMNS_RELATION_MATRIX];
+            }
+
+            for (int i = 0; i < this->noRelations - 1; i++)
+            {
+                for (int j = 0; j < NO_COLUMNS_RELATION_MATRIX; j++)
+                    newMatrix[i][j] = copy[i][j];
+            }
+
+            //dealocate memory for the copy
+            for (int i = 0; i < this->noRelations-1; i++)
+            {
+                delete[] copy[i];
+            }
+            delete[] copy;
+
+            //add new relation 
+            newMatrix[this->noRelations - 1][0] = table1;
+            newMatrix[this->noRelations - 1][1] = table2;
+            newMatrix[this->noRelations - 1][2] = showRelationType(type);
+
+            for (int i = 0; i < this->noRelations - 1; i++)
+            {
+                delete[] this->relationsMatrix[i];
+            }
+            delete[] this->relationsMatrix;
+
+            this->relationsMatrix = copyMatrixOfStrings(newMatrix, this->noRelations);
+
+            for (int i = 0; i < this->noRelations; i++)
+            {
+                delete[] newMatrix[i];
+            }
+            delete[] newMatrix;
+        }
+        else
+        {
+            throw std::exception("The name doesn t match any tables from this database.");
+        }
     }
 
     //operators
@@ -925,17 +1030,12 @@ int main()
 
     Database myDatabase;
     
-    int noTables;
-    std::cout << std::endl<< "Number of tables for the database: ";
-    std::cin >> noTables;
- 
-        std::string* tables = new std::string[noTables];
-        for (int i = 0; i < noTables; i++)
-        {
-            std::cout << "add a table: ";
-            std::cin >> tables[i];
-        }
-        std::cout << std::endl;
+    int noTables = 3; 
+    std::string* tables = new std::string[noTables];
+    tables[0] = "Employees";
+    tables[1] = "Managers";
+    tables[2] = "Items Sold";
+
     try {
          
         //test set and get methods
@@ -947,8 +1047,10 @@ int main()
 
         Database db(tables, noTables);
         db.displayDatabaseInfo();
-        std::cout << "----------------------------------------------------"<<std::endl;
         myDatabase = db;
+        myDatabase.establishRelation(tables[0], tables[1], RelationType::ONE_TO_MANY);
+        myDatabase.displayDatabaseInfo();
+        myDatabase.establishRelation("Employees", "Items Sold", RelationType::ONE_TO_MANY);
         myDatabase.displayDatabaseInfo();
         }
     catch (const std::exception& e)
@@ -961,6 +1063,7 @@ int main()
     std::cout<<myDatabase.showRelationType()<<std::endl;*/
 
     IndexManager myIndex;
+    std::cout << std::endl;
     try {
         myIndex.setIndexName("Salary");
         std::cout << myIndex.getIndexName() << std::endl;
