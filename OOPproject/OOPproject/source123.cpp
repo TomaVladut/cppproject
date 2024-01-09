@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <sstream>
 
 class CommandProcessor {
     char* commandString = nullptr;
@@ -60,6 +61,161 @@ class CommandProcessor {
     // Helper function to validate the column default value
     void ValidateColumnDefaultValue(const std::string& defaultValue) {
         // No specific validation for default value in this example
+    }
+
+    bool ExtractTableName(const std::string& insertCommand, std::string& tableName) {
+        std::regex tableNameRegex(R"(\s*INSERT\s+INTO\s+(\w+)\s+VALUES)");
+        std::smatch match;
+        if (std::regex_search(insertCommand, match, tableNameRegex)) {
+            tableName = match[1];
+            return true;
+        }
+        else {
+            std::cout << "Error: Missing or invalid table name." << std::endl;
+            return false;
+        }
+    }
+
+    bool ExtractAndValidateValues(const std::string& insertCommand, std::string values[], int& numValues) {
+        std::regex valuesRegex(R"(\((.*?)\))");
+        std::smatch match;
+        if (std::regex_search(insertCommand, match, valuesRegex)) {
+            std::string valuesString = match[1];
+
+            // Split values using comma as a delimiter
+            std::istringstream iss(valuesString);
+            std::string value;
+            int maxValues = 100; // I will adjust this as I see fit, ATM it is ok
+            while (std::getline(iss, value, ',')) {
+                // Remove leading and trailing whitespaces
+                value = std::regex_replace(value, std::regex("^\\s+|\\s+$"), "");
+                if (numValues < maxValues) {
+                    values[numValues++] = value;
+                }
+                else {
+                    std::cout << "Error: Exceeded maximum number of values." << std::endl;
+                    return false;
+                }
+            }
+
+            // Validate the number of values
+            if (numValues == 0) {
+                std::cout << "Error: No values provided." << std::endl;
+                return false;
+            }
+
+            return true;
+        }
+        else {
+            std::cout << "Error: Missing or invalid values." << std::endl;
+            return false;
+        }
+    }
+
+    bool ExtractColumnNames(const std::string& selectCommand, std::string& columnNames) {
+        std::regex columnNamesRegex(R"(\s*SELECT\s+(ALL|\([\w\s,]+\))\s+FROM)");
+        std::smatch match;
+        if (std::regex_search(selectCommand, match, columnNamesRegex)) {
+            columnNames = match[1];
+            return true;
+        }
+        else {
+            std::cout << "Error: Missing or invalid column names." << std::endl;
+            return false;
+        }
+    }
+
+    bool ExtractFilterCriteria(const std::string& selectCommand, std::string& filterColumnName, std::string& filterColumnValue) {
+        std::regex filterCriteriaRegex(R"(\s*WHERE\s+(\w+)\s*=\s*'([^']+)'\s*)");
+        std::smatch match;
+        if (std::regex_search(selectCommand, match, filterCriteriaRegex)) {
+            filterColumnName = match[1];
+            filterColumnValue = match[2];
+            return true;
+        }
+        else {
+            std::cout << "Error: Missing or invalid filter criteria." << std::endl;
+            return false;
+        }
+    }
+
+    //table names for insert etc to bo resolved
+
+    bool ExtractDeleteTableName(const std::string& deleteCommand, std::string& tableName) {
+        std::regex tableNameRegex(R"(\s*FROM\s+(\w+)\s+WHERE)");
+        std::smatch match;
+        if (std::regex_search(deleteCommand, match, tableNameRegex)) {
+            tableName = match[1];
+            return true;
+        }
+        else {
+            std::cout << "Error: Missing or invalid table name." << std::endl;
+            return false;
+        }
+    }
+
+    bool ExtractDeleteFilterCriteria(const std::string& deleteCommand, std::string& filterColumnName, std::string& filterColumnValue) {
+        std::regex filterCriteriaRegex(R"(\s*WHERE\s+(\w+)\s*=\s*'([^']+)'\s*)");
+        std::smatch match;
+        if (std::regex_search(deleteCommand, match, filterCriteriaRegex)) {
+            filterColumnName = match[1];
+            filterColumnValue = match[2];
+            return true;
+        }
+        else {
+            std::cout << "Error: Missing or invalid filter criteria." << std::endl;
+            return false;
+        }
+    }
+
+    // Helper function to validate the UPDATE command
+    void ValidateUpdateCommand(const std::string& updateCommand) {
+        // Validate the basic syntax of the UPDATE command
+        std::regex updateRegex(R"(\s*UPDATE\s+(\w+)\s+SET\s+(\w+)\s*=\s*'([^']+)'\s+WHERE\s+(\w+)\s*=\s*'([^']+)'\s*)");
+        std::smatch match;
+        if (std::regex_match(updateCommand, match, updateRegex)) {
+            // Extract and validate the table name, column name, value, filter column, and filter value
+            std::string tableName = match[1];
+            std::string columnName = match[2];
+            std::string columnValue = match[3];
+            std::string filterColumn = match[4];
+            std::string filterValue = match[5];
+
+            ValidateTableName(tableName);
+            ValidateColumnName(columnName);
+            ValidateColumnValue(columnValue);
+            ValidateFilterColumn(filterColumn);
+            ValidateFilterValue(filterValue);
+        }
+        else {
+            std::cout << "Error: Invalid UPDATE command format." << std::endl;
+        }
+    }
+
+    // Helper function to validate the table name
+    void ValidateTableName(const std::string& tableName) {
+        // Validate if the table name is alphanumeric
+        if (!std::regex_match(tableName, std::regex("^[a-zA-Z0-9_]+$"))) {
+            std::cout << "Error: Invalid characters in table name." << std::endl;
+        }
+    }
+
+    // Helper function to validate the column value
+    void ValidateColumnValue(const std::string& value) {
+        // No specific validation for column value in this example
+    }
+
+    // Helper function to validate the filter column
+    void ValidateFilterColumn(const std::string& filterColumn) {
+        // Validate if the filter column name is alphanumeric
+        if (!std::regex_match(filterColumn, std::regex("^[a-zA-Z0-9_]+$"))) {
+            std::cout << "Error: Invalid characters in filter column name." << std::endl;
+        }
+    }
+
+    // Helper function to validate the filter value
+    void ValidateFilterValue(const std::string& filterValue) {
+        // No specific validation for filter value in this example
     }
 
 
@@ -207,6 +363,186 @@ public:
         }
 
         std::cout << "CREATE TABLE command is valid." << std::endl;
+    }
+
+    void ValidateDropTableCommand(const std::string& commandString) {
+        // Validate if the command contains "DROP TABLE"
+        if (commandString.find("DROP TABLE") == std::string::npos) {
+            std::cout << "Error: Missing 'DROP TABLE' keyword." << std::endl;
+            return;
+        }
+
+        // Extract the table name
+        std::string tableName;
+        std::regex tableNameRegex(R"(\s*DROP\s+TABLE\s+(\w+))");
+        std::smatch match;
+        if (std::regex_search(commandString, match, tableNameRegex)) {
+            tableName = match[1];
+        }
+        else {
+            std::cout << "Error: Missing or invalid table name." << std::endl;
+            return;
+        }
+
+        // Validate if the table name is alphanumeric
+        if (!std::regex_match(tableName, std::regex("^[a-zA-Z0-9_]+$"))) {
+            std::cout << "Error: Invalid characters in table name." << std::endl;
+            return;
+        }
+
+        // Check for additional characters after the table name
+        size_t pos = commandString.find(tableName) + tableName.length();
+        std::string remaining = commandString.substr(pos);
+        if (!remaining.empty() && !std::all_of(remaining.begin(), remaining.end(), ::isspace)) {
+            std::cout << "Error: Extra characters after table name." << std::endl;
+            return;
+        }
+
+        std::cout << "DROP TABLE command is valid. Table to delete: " << tableName << std::endl;
+    }
+
+    void ValidateDisplayTableCommand(const std::string& commandString) {
+        // Validate if the command contains "DISPLAY TABLE"
+        if (commandString.find("DISPLAY TABLE") == std::string::npos) {
+            std::cout << "Error: Missing 'DISPLAY TABLE' keywords." << std::endl;
+            return;
+        }
+
+        // Extract the table name
+        std::string tableName;
+        std::regex tableNameRegex(R"(\s*DISPLAY\s+TABLE\s+(\w+))");
+        std::smatch match;
+        if (std::regex_search(commandString, match, tableNameRegex)) {
+            tableName = match[1];
+        }
+        else {
+            std::cout << "Error: Missing or invalid table name." << std::endl;
+            return;
+        }
+
+        // Validate if the table name is alphanumeric
+        if (!std::regex_match(tableName, std::regex("^[a-zA-Z0-9_]+$"))) {
+            std::cout << "Error: Invalid characters in table name." << std::endl;
+            return;
+        }
+
+        // Check for additional characters after the table name
+        size_t pos = commandString.find(tableName) + tableName.length();
+        std::string remaining = commandString.substr(pos);
+        if (!remaining.empty() && !std::all_of(remaining.begin(), remaining.end(), ::isspace)) {
+            std::cout << "Error: Extra characters after table name." << std::endl;
+            return;
+        }
+
+        std::cout << "DISPLAY TABLE command is valid. Table to display: " << tableName << std::endl;
+    }
+
+    void ValidateInsertCommand(const std::string& insertCommand) {
+        // Check if the command starts with "INSERT INTO"
+        if (insertCommand.find("INSERT INTO") == std::string::npos) {
+            std::cout << "Error: Missing 'INSERT INTO' keyword." << std::endl;
+            return;
+        }
+
+        // Extract table name
+        std::string tableName;
+        if (!ExtractTableName(insertCommand, tableName)) {
+            return;
+        }
+
+        // Extract and validate values
+        const int maxValues = 10; // Adjust the maximum number of values as needed
+        std::string values[maxValues];
+        int numValues = 0;
+        if (!ExtractAndValidateValues(insertCommand, values, numValues)) {
+            return;
+        }
+
+        // Optional: Correlate values with column sequence from CREATE (not implemented)
+
+        // Display information
+        std::cout << "INSERT command is valid." << std::endl;
+        std::cout << "Table: " << tableName << std::endl;
+        std::cout << "Number of values: " << numValues << std::endl;
+        for (int i = 0; i < numValues; ++i) {
+            std::cout << "Value for column " << i + 1 << ": " << values[i] << std::endl;
+        }
+    }
+
+    void ValidateSelectCommand(const std::string& selectCommand) {
+        // Check if the command starts with "SELECT"
+        if (selectCommand.find("SELECT") == std::string::npos) {
+            std::cout << "Error: Missing 'SELECT' keyword." << std::endl;
+            return;
+        }
+
+        // Extract column names, ALL or specific columns
+        std::string columnNames;
+        if (!ExtractColumnNames(selectCommand, columnNames)) {
+            return;
+        }
+
+        // Extract table name
+        std::string tableName;
+        if (!ExtractTableName(selectCommand, tableName)) {
+            return;
+        }
+
+        // Check if WHERE clause is present
+        bool hasWhereClause = (selectCommand.find("WHERE") != std::string::npos);
+
+        // Optional: Extract and validate filter criteria (not implemented)
+        std::string filterColumnName;
+        std::string filterColumnValue;
+        if (hasWhereClause) {
+            if (!ExtractFilterCriteria(selectCommand, filterColumnName, filterColumnValue)) {
+                return;
+            }
+        }
+
+        // Display information
+        std::cout << "SELECT command is valid." << std::endl;
+        std::cout << "Table: " << tableName << std::endl;
+        std::cout << "Columns: " << columnNames << std::endl;
+        std::cout << "Filter: " << (hasWhereClause ? "yes" : "no") << std::endl;
+        if (hasWhereClause) {
+            std::cout << "Filter Column: " << filterColumnName << " with value: " << filterColumnValue << std::endl;
+        }
+    }
+
+    void ValidateDeleteCommand(const std::string& deleteCommand) {
+        // Check if the command starts with "DELETE"
+        if (deleteCommand.find("DELETE") == std::string::npos) {
+            std::cout << "Error: Missing 'DELETE' keyword." << std::endl;
+            return;
+        }
+
+        // Extract table name
+        std::string tableName;
+        if (!ExtractTableName(deleteCommand, tableName)) {
+            return;
+        }
+
+        // Check if WHERE clause is present
+        bool hasWhereClause = (deleteCommand.find("WHERE") != std::string::npos);
+
+        // Optional: Extract and validate filter criteria (not implemented)
+        std::string filterColumnName;
+        std::string filterColumnValue;
+        if (hasWhereClause) {
+            if (!ExtractFilterCriteria(deleteCommand, filterColumnName, filterColumnValue)) {
+                return;
+            }
+        }
+        else {
+            std::cout << "Error: Missing 'WHERE' keyword." << std::endl;
+            return;
+        }
+
+        // Display information
+        std::cout << "DELETE command is valid." << std::endl;
+        std::cout << "Table: " << tableName << std::endl;
+        std::cout << "Filter Column: " << filterColumnName << " with value: " << filterColumnValue << std::endl;
     }
 
     void ExecuteCommand() {
