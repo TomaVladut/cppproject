@@ -31,7 +31,6 @@ public:
             copy[i] = this->tables[i];
         }
         return copy;
-        return tables;
     }
 
     int getNoTables()
@@ -109,6 +108,18 @@ public:
         }
         this->noTables = object.noTables;
         this->linkType = object.linkType;
+        this->noRelations = object.noRelations;
+
+        this->relationsMatrix = new std::string * [this->noRelations];
+        for (int i = 0; i < this->noRelations; i++)
+        {
+            this->relationsMatrix[i] = new std::string[NO_COLUMNS_RELATION_MATRIX];
+        }
+        for (int i = 0; i < object.noRelations; i++)
+        {
+            for (int j = 0; j < NO_COLUMNS_RELATION_MATRIX; j++)
+                this->relationsMatrix[i][j] = object.relationsMatrix[i][j];
+        }
     }
 
     //destructor
@@ -253,7 +264,40 @@ public:
         return *this;
     }
 
+    friend std::ostream& operator<<(std::ostream& console, Database database);
+
 };
+
+std::ostream& operator<<(std::ostream& console, Database database)
+{
+    console << std::endl;
+    console << "Database info: " << std::endl;
+    console << "Number of tables: " << database.getNoTables()<<std::endl;
+
+    if (database.getTables() != nullptr && database.getNoTables() > 0)
+    {
+        console << "The names of your tables are: ";
+        std::string* tableArray = database.getTables();
+        for (int i = 0; i < database.getNoTables(); i++)
+        {
+            console << tableArray[i] << " ";
+        }
+        console << std::endl;
+
+        if (database.relationsMatrix != nullptr && database.noRelations > 0)
+        {
+            for (int i = 0; i < database.noRelations; i++)
+            {
+                console << "Tables " << database.relationsMatrix[i][0] << " and " << database.relationsMatrix[i][1] << " have a " << database.relationsMatrix[i][2] << " relation." << std::endl;
+            }
+        }
+        else console << std::endl << "There are no relations established between any of your tables.";
+        console << std::endl;
+    }
+    else console << "There are no tables in your database."<<std::endl;
+    
+    return console;
+}
 
 class IndexManager
 {
@@ -1052,6 +1096,8 @@ int main()
         myDatabase.displayDatabaseInfo();
         myDatabase.establishRelation("Employees", "Items Sold", RelationType::ONE_TO_MANY);
         myDatabase.displayDatabaseInfo();
+
+        std::cout << myDatabase;
         }
     catch (const std::exception& e)
     {
