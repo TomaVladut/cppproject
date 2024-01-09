@@ -1,14 +1,67 @@
 #define _CRT_SECURE_NO_WARNINGS
-
+#include <regex>
 #include <iostream>
 #include <string>
 #include <string.h>
 
 class CommandProcessor {
-    char* commandString;
+    char* commandString = nullptr;
     static const int COMMAND_TYPES_COUNT = 9;
     const char* commandTypes[COMMAND_TYPES_COUNT] = {"CREATE TABLE", "CREATE INDEX", "DROP TABLE",
     "DROP INDEX", "DISPLAY TABLE", "INSERT", "SELECT", "UPDATE", "DELETE"};
+
+    // Helper function to validate the column definition
+    void ValidateColumnDefinition(const std::string& column) {
+        // Split the column definition into parts (name, type, size, default_value)
+        std::string parts[4];
+        std::regex partsRegex(R"(\s*\((\w+),\s*(\w+),\s*(\d+),\s*'([^']*)'\)\s*)");
+        std::smatch match;
+        if (std::regex_match(column, match, partsRegex)) {
+            for (size_t i = 1; i < match.size(); ++i) {
+                parts[i - 1] = match[i];
+            }
+        }
+        else {
+            std::cout << "Error: Invalid column definition format." << std::endl;
+            return;
+        }
+
+        // Validate each part of the column definition
+        ValidateColumnName(parts[0]);
+        ValidateColumnType(parts[1]);
+        ValidateColumnSize(parts[2]);
+        ValidateColumnDefaultValue(parts[3]);
+    }
+
+    // Helper function to validate the column name
+    void ValidateColumnName(const std::string& name) {
+        // Validate if the column name is alphanumeric
+        if (!std::regex_match(name, std::regex("^[a-zA-Z0-9_]+$"))) {
+            std::cout << "Error: Invalid characters in column name." << std::endl;
+        }
+    }
+
+    // Helper function to validate the column type
+    void ValidateColumnType(const std::string& type) {
+        // Validate if the column type is one of the accepted types (text, integer, float)
+        if (type != "text" && type != "integer" && type != "float") {
+            std::cout << "Error: Invalid column type." << std::endl;
+        }
+    }
+
+    // Helper function to validate the column size
+    void ValidateColumnSize(const std::string& size) {
+        // Validate if the column size is a valid positive integer
+        if (!std::regex_match(size, std::regex("^[1-9]\\d*$"))) {
+            std::cout << "Error: Invalid column size." << std::endl;
+        }
+    }
+
+    // Helper function to validate the column default value
+    void ValidateColumnDefaultValue(const std::string& defaultValue) {
+        // No specific validation for default value in this example
+    }
+
 
 public:
     static const int MIN_COMMAND_SIZE = 5;
@@ -34,7 +87,7 @@ public:
     }
 
     ~CommandProcessor() {
-        delete[] commandString;
+        delete[] this->commandString;
     }
 
     void SetCommandString(const char* newCommandString)
@@ -71,6 +124,8 @@ public:
         }
     }
 
+    //this one is kinda useless now (ValidateCommand), I wanted to do a fucntion for all the commands.
+
     void ValidateCommand() {
         bool validCommandType = false;
         for (int i = 0; i < COMMAND_TYPES_COUNT; ++i) {
@@ -94,6 +149,66 @@ public:
         std::cout << "Command is valid." << std::endl;
     }
 
+    void ValidateCreateTableCommand(const std::string& commandString) {
+        // Validate if the command contains "CREATE TABLE"
+        if (commandString.find("CREATE TABLE") == std::string::npos) {
+            std::cout << "Error: Missing 'CREATE TABLE' keyword." << std::endl;
+            return;
+        }
+
+        // Validate if the command contains "(" and ")"
+        if (commandString.find("(") == std::string::npos || commandString.find(")") == std::string::npos) {
+            std::cout << "Error: Missing '(' or ')' in column definition." << std::endl;
+            return;
+        }
+
+        // Extract the table name
+        std::string tableName;
+        std::regex tableNameRegex(R"(\s*CREATE\s+TABLE\s+(\w+)\s*\()");
+        std::smatch match;
+        if (std::regex_search(commandString, match, tableNameRegex)) {
+            tableName = match[1];
+        }
+        else {
+            std::cout << "Error: Missing or invalid table name." << std::endl;
+            return;
+        }
+
+        // Validate if the table name is alphanumeric
+        if (!std::regex_match(tableName, std::regex("^[a-zA-Z0-9_]+$"))) {
+            std::cout << "Error: Invalid characters in table name." << std::endl;
+            return;
+        }
+
+        // Extract and validate column definitions
+        std::string columnDefinitions;
+        std::regex columnDefinitionsRegex(R"(\((.*?)\))");
+        if (std::regex_search(commandString, match, columnDefinitionsRegex)) {
+            columnDefinitions = match[1];
+        }
+        else {
+            std::cout << "Error: Missing or invalid column definitions." << std::endl;
+            return;
+        }
+
+        // Split column definitions into individual columns
+        std::vector<std::string> columns;
+        std::regex columnsRegex(R"(\s*(\w+)\s+(\w+)\s*(,\s*\w+\s+(\w+))*\s*\)");
+        auto columnIterator = std::sregex_iterator(columnDefinitions.begin(), columnDefinitions.end(), columnsRegex);
+        auto endIterator = std::sregex_iterator();
+        for (; columnIterator != endIterator; ++columnIterator) {
+            columns.push_back((*columnIterator)[0]);
+        }
+
+        // Validate each column definition
+        for (const auto& column : columns) {
+            // Replace with the appropriate function for validating column definitions
+            std::cout << "Column definition: " << column << std::endl;
+        }
+
+        std::cout << "CREATE TABLE command is valid." << std::endl;
+    }
+
     void ExecuteCommand() {
         std::cout << std::endl << "Executing command: " << commandString;
         // I will parse all the commands and execute specific tasks after validations and 
@@ -105,6 +220,7 @@ public:
         std::cout << std::endl << "Command String: " << commandString;
         // I will also display the command parameters but for now it looks decent
     }
+
 
 };
 
@@ -160,7 +276,7 @@ public:
 };
 
 class TableCreator {
-    char* tableName;
+    char* tableName = nullptr;
     static const int MAX_COLUMNS = 10;
     ColumnDefinition columnDefinitions[MAX_COLUMNS];
     int numColumns = 0;
@@ -222,7 +338,7 @@ public:
     }
 
     ~TableCreator() {
-        delete[] tableName;
+        delete[] this->tableName;
     }
 };
 
