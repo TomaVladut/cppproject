@@ -301,6 +301,27 @@ std::ostream& operator<<(std::ostream& console, Database database)
     return console;
 }
 
+std::istream& operator>>(std::istream& console, Database& database)
+{
+    std::cout << "Introduce the number of tables for your databse: ";
+    int noTables;
+    console >> noTables;
+    while (noTables < 1)
+    {
+        std::cout << "The number can t be negative or 0 please try again: ";
+        console >> noTables;
+    }
+    std::cout << "Introduce the name for these tables: ";
+    std::string* tables = new std::string[noTables];
+    for (int i = 0; i < noTables; i++)
+    {
+        console >> tables[i];
+    }
+    database.setTables(tables, noTables);
+
+    return console;
+}
+
 class IndexManager
 {
     std::string indexName = "";
@@ -1540,6 +1561,8 @@ int main()
         myDatabase.displayDatabaseInfo();
 
         std::cout << myDatabase;
+        std::cin >> db;
+        std::cout << db;
         }
     catch (const std::exception& e)
     {
