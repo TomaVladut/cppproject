@@ -1,15 +1,736 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <regex>
+
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <exception>
+#include <regex>
+#include <fstream>
 #include <sstream>
+
+enum RelationType { UNDEFINED, ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE };
+
+class Database
+{
+    //std::string tableName = "";
+    std::string* tables = nullptr;
+    int noTables = 0;
+    RelationType linkType = RelationType::UNDEFINED;
+    std::string** relationsMatrix = nullptr;
+    int noRelations = 0;
+
+public:
+    static const int MIN_NO_TABLES = 1;
+    static const int MIN_TABLE_NAME_LENGTH = 3;
+    static const int NO_COLUMNS_RELATION_MATRIX = 3;
+
+public:
+    //getters
+    std::string* getTables()
+    {
+        std::string* copy = new std::string[this->noTables];
+        for (int i = 0; i < this->noTables; i++)
+        {
+            copy[i] = this->tables[i];
+        }
+        return copy;
+    }
+
+    int getNoTables()
+    {
+        return this->noTables;
+    }
+
+    RelationType getRelationType()
+    {
+        return this->linkType;
+    }
+
+    //setters
+    void setTables(std::string* tablesArray, int noTables)
+    {
+        if (this->tables != nullptr)
+        {
+            delete[] this->tables;
+        }
+        if (noTables < this->MIN_NO_TABLES)
+        {
+            throw std::exception("No tables were sent.");
+        }
+        if (tablesArray->length() < MIN_TABLE_NAME_LENGTH)
+        {
+            throw std::exception("Table name is too short. ");
+        }
+
+        this->tables = new std::string[noTables];
+        for (int i = 0; i < noTables; i++)
+        {
+            this->tables[i] = tablesArray[i];
+        }
+        this->noTables = noTables;
+    }
+
+    void setRelationType(RelationType type)
+    {
+        this->linkType = type;
+    }
+
+    std::string showRelationType()
+    {
+        switch (this->linkType)
+        {
+        case UNDEFINED:
+            return "UNDEFINED";
+        case ONE_TO_ONE:
+            return "ONE_TO_ONE";
+        case ONE_TO_MANY:
+            return "ONE_TO_MANY";
+        case MANY_TO_ONE:
+            return"MANY_TO_ONE";
+        }
+    }
+
+    //constructors
+    Database()
+    {
+
+    }
+
+    Database(std::string* tables, int noTables) :linkType(UNDEFINED)
+    {
+        this->setTables(tables, noTables);
+    }
+
+    //copy ctr
+    Database(const Database& object)
+    {
+        this->tables = new std::string[object.noTables];
+        for (int i = 0; i < object.noTables; i++)
+        {
+            this->tables[i] = object.tables[i];
+        }
+        this->noTables = object.noTables;
+        this->linkType = object.linkType;
+        this->noRelations = object.noRelations;
+
+        this->relationsMatrix = new std::string * [this->noRelations];
+        for (int i = 0; i < this->noRelations; i++)
+        {
+            this->relationsMatrix[i] = new std::string[NO_COLUMNS_RELATION_MATRIX];
+        }
+        for (int i = 0; i < object.noRelations; i++)
+        {
+            for (int j = 0; j < NO_COLUMNS_RELATION_MATRIX; j++)
+                this->relationsMatrix[i][j] = object.relationsMatrix[i][j];
+        }
+    }
+
+    //destructor
+    ~Database()
+    {
+        delete[] this->tables;
+        for (int i = 0; i < this->noRelations; i++)
+        {
+            delete[] this->relationsMatrix[i];
+        }
+        delete[] this->relationsMatrix;
+    }
+
+    //methods
+    void displayDatabaseInfo()
+    {
+        if (this->tables->length() > MIN_TABLE_NAME_LENGTH && this->noTables > MIN_NO_TABLES)
+        {
+            std::cout << "There are " << this->noTables << " tables. " << std::endl;
+            for (int i = 0; i < this->noTables; i++)
+                std::cout << "Table: " << this->tables[i] << std::endl;
+        }
+        else std::cout << "There are no tables." << std::endl;
+        //std::cout << "Relation type: "<< this->showRelationType()<<std::endl;
+        if (this->relationsMatrix != nullptr && this->noRelations > 0)
+        {
+            for (int i = 0; i < this->noRelations; i++)
+            {
+                std::cout << "The tables " << relationsMatrix[i][0] << " and " << relationsMatrix[i][1] << " have a " << relationsMatrix[i][2] << " relation." << std::endl;
+            }
+        }
+        else std::cout << "There are no relations established between any of your tables." << std::endl;
+        std::cout << "----------------------------------------------------" << std::endl;
+    }
+
+    std::string** copyMatrixOfStrings(std::string** matrix, int rows)
+    {
+        std::string** copy = new std::string * [rows];
+        for (int i = 0; i < rows; i++)
+            copy[i] = new std::string[NO_COLUMNS_RELATION_MATRIX];
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < NO_COLUMNS_RELATION_MATRIX; j++)
+                copy[i][j] = matrix[i][j];
+        }
+
+        return copy;
+    }
+
+
+    std::string showRelationType(RelationType type)
+    {
+        switch (type)
+        {
+        case UNDEFINED:
+            return "UNDEFINED";
+        case ONE_TO_ONE:
+            return "ONE_TO_ONE";
+        case ONE_TO_MANY:
+            return "ONE_TO_MANY";
+        case MANY_TO_ONE:
+            return"MANY_TO_ONE";
+        }
+    }
+
+    bool checkTableName(std::string table)
+    {
+        for (int i = 0; i < this->noTables; i++)
+        {
+            if (this->tables[i] == table)
+                return true;
+        }
+        return false;
+    }
+
+    void establishRelation(const std::string table1, const std::string table2, RelationType type)
+    {
+        if (checkTableName(table1) && checkTableName(table2))
+        {
+            //copy initial matrix in order to preserve it's elements
+            std::string** copy = copyMatrixOfStrings(this->relationsMatrix, this->noRelations);
+
+            //allocate memory for the new matrix
+            this->noRelations++;
+            std::string** newMatrix = new std::string * [this->noRelations];
+            for (int i = 0; i < this->noRelations; i++)
+            {
+                newMatrix[i] = new std::string[NO_COLUMNS_RELATION_MATRIX];
+            }
+
+            for (int i = 0; i < this->noRelations - 1; i++)
+            {
+                for (int j = 0; j < NO_COLUMNS_RELATION_MATRIX; j++)
+                    newMatrix[i][j] = copy[i][j];
+            }
+
+            //dealocate memory for the copy
+            for (int i = 0; i < this->noRelations - 1; i++)
+            {
+                delete[] copy[i];
+            }
+            delete[] copy;
+
+            //add new relation 
+            newMatrix[this->noRelations - 1][0] = table1;
+            newMatrix[this->noRelations - 1][1] = table2;
+            newMatrix[this->noRelations - 1][2] = showRelationType(type);
+
+            for (int i = 0; i < this->noRelations - 1; i++)
+            {
+                delete[] this->relationsMatrix[i];
+            }
+            delete[] this->relationsMatrix;
+
+            this->relationsMatrix = copyMatrixOfStrings(newMatrix, this->noRelations);
+
+            for (int i = 0; i < this->noRelations; i++)
+            {
+                delete[] newMatrix[i];
+            }
+            delete[] newMatrix;
+        }
+        else
+        {
+            throw std::exception("The name doesn t match any tables from this database.");
+        }
+    }
+
+    //operators
+    Database operator=(const Database source)
+    {
+        if (&source == this)
+        {
+            return *this;
+        }
+        else
+        {
+            this->linkType = source.linkType;
+            this->setTables(source.tables, source.noTables);
+        }
+        return *this;
+    }
+
+    friend std::ostream& operator<<(std::ostream& console, Database database);
+
+};
+
+std::ostream& operator<<(std::ostream& console, Database database)
+{
+    console << std::endl;
+    console << "Database info: " << std::endl;
+    console << "Number of tables: " << database.getNoTables() << std::endl;
+
+    if (database.getTables() != nullptr && database.getNoTables() > 0)
+    {
+        console << "The names of your tables are: ";
+        std::string* tableArray = database.getTables();
+        for (int i = 0; i < database.getNoTables(); i++)
+        {
+            console << tableArray[i] << " ";
+        }
+        console << std::endl;
+
+        if (database.relationsMatrix != nullptr && database.noRelations > 0)
+        {
+            for (int i = 0; i < database.noRelations; i++)
+            {
+                console << "Tables " << database.relationsMatrix[i][0] << " and " << database.relationsMatrix[i][1] << " have a " << database.relationsMatrix[i][2] << " relation." << std::endl;
+            }
+        }
+        else console << std::endl << "There are no relations established between any of your tables.";
+        console << std::endl;
+    }
+    else console << "There are no tables in your database." << std::endl;
+
+    return console;
+}
+
+std::istream& operator>>(std::istream& console, Database& database)
+{
+    std::cout << "Introduce the number of tables for your databse: ";
+    int noTables;
+    console >> noTables;
+    while (noTables < 1)
+    {
+        std::cout << "The number can t be negative or 0 please try again: ";
+        console >> noTables;
+    }
+    std::cout << "Introduce the name for these tables: ";
+    std::string* tables = new std::string[noTables];
+    for (int i = 0; i < noTables; i++)
+    {
+        console >> tables[i];
+    }
+    database.setTables(tables, noTables);
+
+    return console;
+}
+
+class IndexManager
+{
+    std::string indexName = "";
+    int* indexedColumns = nullptr;
+    int noColumns = 0;
+
+public:
+    static const int MIN_INDEXED_COLUMNS = 1;
+    static const int MIN_INDEX_NAME_LENGTH = 2;
+
+    //getters
+
+    std::string getIndexName()
+    {
+        return this->indexName;
+    }
+
+    int getNoColumns()
+    {
+
+        return this->noColumns;
+    }
+
+    int* getIndexedColumns()
+    {
+        if (this->indexedColumns == nullptr && this->noColumns < MIN_INDEXED_COLUMNS)
+        {
+            return nullptr;
+        }
+
+        int* copy = new int[this->noColumns];
+        for (int i = 0; i < this->noColumns; i++)
+        {
+            copy[i] = this->indexedColumns[i];
+        }
+        return copy;
+    }
+
+    //setters
+    void setIndexName(std::string name)
+    {
+        if (name.length() < MIN_INDEX_NAME_LENGTH)
+        {
+            throw std::exception("Index name has to have at least 3 characters");
+        }
+        this->indexName = name;
+    }
+
+    void setIndexedColumns(int* indexedColumns, int noColumns)
+    {
+        if (this->indexedColumns != nullptr)
+            delete[] this->indexedColumns;
+
+        if (noColumns < MIN_INDEXED_COLUMNS)
+        {
+            throw std::exception("No columns were passed.");
+        }
+
+        this->indexedColumns = new int[noColumns];
+        for (int i = 0; i < noColumns; i++)
+        {
+            this->indexedColumns[i] = indexedColumns[i];
+        }
+        this->noColumns = noColumns;
+    }
+
+    //Constructors
+    IndexManager()
+    {
+
+    }
+
+    IndexManager(std::string newIndexName, int* indexColumns, int newNoColumns) :indexName(newIndexName)
+    {
+        this->setIndexedColumns(indexColumns, newNoColumns);
+    }
+
+    //copy ctr
+    IndexManager(const IndexManager& object) :indexName(object.indexName)
+    {
+        this->setIndexedColumns(object.indexedColumns, object.noColumns);
+    }
+
+    //destructor
+    ~IndexManager()
+    {
+        delete[] this->indexedColumns;
+    }
+
+    //methods
+    void displayIndexInfo()
+    {
+        if (this->indexName.length() > MIN_INDEX_NAME_LENGTH)
+            std::cout << std::endl << "Index Name: " << this->indexName << std::endl;
+        else throw std::exception("Index name has to have at least 3 characters");
+
+        if (this->indexedColumns != nullptr && this->noColumns != 0)
+        {
+            std::cout << "Number of columns: " << this->noColumns << std::endl;
+            std::cout << "Indices used: ";
+            for (int i = 0; i < this->noColumns; i++)
+            {
+                std::cout << this->indexedColumns[i] << " ";
+            }
+        }
+        else throw std::exception("No columns were passed.");
+    }
+
+    void addIndex(int newIndex)
+    {
+        if (newIndex < 1)
+        {
+            throw std::exception("Invalid index number was introduced.");
+        }
+        int* copy = new int[this->noColumns + 1];
+        for (int i = 0; i < this->noColumns; i++)
+        {
+            copy[i] = this->indexedColumns[i];
+        }
+        copy[this->noColumns] = newIndex;
+        delete[] this->indexedColumns;
+        indexedColumns = copy;
+
+        this->noColumns++;
+    }
+
+    void subtractIndex(int index)
+    {
+        bool found = false;
+        int subtract = 0;
+        for (int i = 0; i < this->noColumns; i++)
+        {
+            if (this->indexedColumns[i] == index)
+            {
+                found = true;
+                subtract = i;
+                break;
+            }
+        }
+        if (!found)
+        {
+            throw std::exception("This index does not exist.");
+        }
+
+        // Checked if there's only one element and handled separately
+        if (this->noColumns == 1)
+        {
+            delete[] this->indexedColumns;
+            this->indexedColumns = nullptr;
+            this->noColumns = 0;
+            return;
+        }
+
+        int* copy = new int[this->noColumns - 1];
+        //int j = 0;
+        for (int i = 0, j = 0; i < this->noColumns; i++)
+        {
+            if (i != subtract)
+            {
+                copy[j++] = this->indexedColumns[i];
+                //j++;
+            }
+
+        }
+        delete[] this->indexedColumns;
+        this->indexedColumns = copy;
+
+        this->noColumns--;
+    }
+
+    //operators
+    IndexManager operator=(const IndexManager source)
+    {
+        if (&source == this)
+        {
+            return *this;
+        }
+        else
+        {
+            this->setIndexName(source.indexName);
+            this->setIndexedColumns(source.indexedColumns, source.noColumns);
+        }
+        return *this;
+    }
+
+};
+
+class NumericalDataManipulator
+{
+    std::string columnName = "";
+    float* dataValues = nullptr;
+    int noValues;
+
+    static const int MIN_NAME_LENGHT = 2;
+    static const int MIN_NO_INPUTS = 1;
+
+public:
+
+    //getters
+    std::string getColumnName()
+    {
+        return this->columnName;
+    }
+
+    float* getDataValues()
+    {
+        float* copy = new float[this->noValues];
+        for (int i = 0; i < this->noValues; i++)
+        {
+            copy[i] = this->dataValues[i];
+        }
+        return copy;
+    }
+
+    int getNoValues()
+    {
+        return this->noValues;
+    }
+
+    //setters
+    void setColumnName(std::string name)
+    {
+        if (name.length() < MIN_NAME_LENGHT)
+        {
+            throw std::exception("The column name must have at least 2 characters.");
+        }
+        this->columnName = name;
+    }
+
+    void setDataValues(float* data, int noInputs)
+    {
+        if (this->dataValues != nullptr)
+        {
+            delete[] this->dataValues;
+        }
+
+        if (noInputs < MIN_NO_INPUTS)
+        {
+            throw std::exception("There were no inputs passed on.");
+        }
+
+        this->dataValues = new float[noInputs];
+        for (int i = 0; i < noInputs; i++)
+        {
+            this->dataValues[i] = data[i];
+        }
+
+        this->noValues = noInputs;
+    }
+
+    //constructor
+    NumericalDataManipulator()
+    {
+
+    }
+
+    NumericalDataManipulator(std::string columnName)
+    {
+        this->setColumnName(columnName);
+    }
+
+    NumericalDataManipulator(std::string columnName, float* dataValues, int noValues) : columnName(columnName)
+    {
+        this->setDataValues(dataValues, noValues);
+    }
+
+    //copyctr
+    NumericalDataManipulator(const NumericalDataManipulator& object) : columnName(object.columnName)
+    {
+        this->setDataValues(object.dataValues, object.noValues);
+    }
+
+    //destructor
+    ~NumericalDataManipulator()
+    {
+        delete[] this->dataValues;
+    }
+
+    //methods
+    float maxValue()
+    {
+        if (this->dataValues == nullptr || this->noValues < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        float max = this->dataValues[0];
+        for (int i = 1; i < this->noValues; i++)
+        {
+            if (this->dataValues[i] > max)
+                max = this->dataValues[i];
+        }
+        return max;
+    }
+
+    float minValue()
+    {
+        if (this->dataValues == nullptr || this->noValues < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        float min = this->dataValues[0];
+        for (int i = 1; i < this->noValues; i++)
+        {
+            if (this->dataValues[i] < min)
+                min = this->dataValues[i];
+        }
+        return min;
+    }
+
+    void displayNumericalData()
+    {
+        std::cout << std::endl << "Column name: " << this->columnName << std::endl;
+        std::cout << "The values are: ";
+        for (int i = 0; i < this->noValues; i++)
+        {
+            std::cout << this->dataValues[i] << " ";
+        }
+    }
+
+    void ascendingOrder()
+    {
+        if (this->dataValues == nullptr || this->noValues < MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        ascendingOrderRecursive(0, this->noValues - 1);
+    }
+
+    void ascendingOrderRecursive(int first, int last)
+    {
+        if (first < last)
+        {
+            float pivot = this->dataValues[last];
+            int i = first - 1;
+
+            for (int j = first; j < last; j++)
+            {
+                if (this->dataValues[j] <= pivot)
+                {
+                    i++;
+                    std::swap(this->dataValues[i], this->dataValues[j]);
+                }
+            }
+
+            std::swap(this->dataValues[last], this->dataValues[i + 1]);
+
+            ascendingOrderRecursive(first, i);
+            ascendingOrderRecursive(i + 2, last);
+        }
+    }
+
+    void descendingOrder()
+    {
+        if (this->dataValues == nullptr && this->noValues < this->MIN_NO_INPUTS)
+        {
+            throw std::exception("No data was passed.");
+        }
+
+        descendingOrderRecursive(0, this->noValues - 1);
+    }
+
+    void descendingOrderRecursive(int first, int last)
+    {
+        if (first < last)
+        {
+            float pivot = this->dataValues[last];
+            int i = first - 1;
+            for (int j = first; j < last; j++)
+            {
+                if (this->dataValues[j] >= pivot)
+                {
+                    i++;
+                    std::swap(this->dataValues[i], this->dataValues[j]);
+                }
+            }
+            std::swap(this->dataValues[i + 1], this->dataValues[last]);
+
+            descendingOrderRecursive(first, i);
+            descendingOrderRecursive(i + 2, last);
+        }
+    }
+
+    //operators
+    NumericalDataManipulator operator=(const NumericalDataManipulator source)
+    {
+        if (&source == this)
+        {
+            return *this;
+        }
+        else
+        {
+            this->setColumnName(source.columnName);
+            this->setDataValues(source.dataValues, source.noValues);
+        }
+        return *this;
+    }
+};
 
 class CommandProcessor {
     char* commandString = nullptr;
     static const int COMMAND_TYPES_COUNT = 9;
-    const char* commandTypes[COMMAND_TYPES_COUNT] = {"CREATE TABLE", "CREATE INDEX", "DROP TABLE",
-    "DROP INDEX", "DISPLAY TABLE", "INSERT", "SELECT", "UPDATE", "DELETE"};
+    const char* commandTypes[COMMAND_TYPES_COUNT] = { "CREATE TABLE", "CREATE INDEX", "DROP TABLE",
+    "DROP INDEX", "DISPLAY TABLE", "INSERT", "SELECT", "UPDATE", "DELETE" };
+    TableConfigManager tableConfigManager;
+    BinaryDataManager binaryDataManager;
 
     // Helper function to validate the column definition
     void ValidateColumnDefinition(const std::string& column) {
@@ -253,7 +974,7 @@ public:
             this->commandString = new char[strlen(newCommandString) + 1];
             strcpy_s(this->commandString, strlen(newCommandString) + 1, newCommandString);
         }
-        else 
+        else
             throw new std::exception("Invalid Command");
     }
 
@@ -557,12 +1278,69 @@ public:
         // I will also display the command parameters but for now it looks decent
     }
 
+    void processCommands(const std::vector<std::string>& commands) {
+        for (const auto& command : commands) {
+            std::istringstream iss(command);
+            std::string commandType;
+            iss >> commandType;
+
+            if (commandType == "CREATE") {
+                // Process CREATE TABLE command
+                TableConfigManager tableConfigManager;
+                processCreateTableCommand(iss, tableConfigManager);
+            }
+            else if (commandType == "INSERT") {
+                // Process INSERT command
+                processInsertCommand(iss);
+            } 
+        }
+    }
+
+    char* stringToChar(const std::string& str) {
+        char* result = new char[str.length() + 1];
+        strcpy(result, str.c_str());
+        return result;
+    }
+
+    void processCreateTableCommand(std::istringstream& iss, TableConfigManager& tableConfigManager) {
+        std::string tableName;
+        iss >> tableName;
+
+        std::vector<std::string> columnNames;
+        std::string columnName;
+        while (iss >> columnName) {
+            columnNames.push_back(columnName);
+        }
+
+        // Convert vector of strings to array of char*
+        std::vector<const char*> columnNamesChar;
+        for (const auto& column : columnNames) {
+            columnNamesChar.push_back(stringToChar(column));
+        }
+
+        tableConfigManager.addTableConfig(tableName.c_str(), columnNamesChar.data(), columnNamesChar.size());
+
+        // Save the table configuration to a file (optional)
+    }
+
+    void processInsertCommand(std::istringstream& iss) {
+        std::string tableName;
+        iss >> tableName;
+
+        std::vector<char> data;
+        char value;
+        while (iss >> value) {
+            data.push_back(value);
+        }
+
+        binaryDataManager.saveDataToFile(tableName + ".bin", data);
+    }
 
 };
 
 class ColumnDefinition {
-    char* columnName;
-    char* dataType;
+    char* columnName = nullptr;
+    char* dataType = nullptr;
 
 public:
     void SetColumnName(const char* name)
@@ -609,6 +1387,12 @@ public:
         delete[] this->dataType;
         delete[] this->columnName;
     }
+
+    ColumnDefinition(const ColumnDefinition& object)
+    {
+        this->SetColumnName(object.columnName);
+        this->SetDataType(object.dataType);
+    }
 };
 
 class TableCreator {
@@ -646,9 +1430,10 @@ public:
         return valueOfTableName;
     }
 
-    ColumnDefinition* GetColumnDefinitions()
+    ColumnDefinition GetColumnDefinitions()
     {
-        return columnDefinitions;
+        ColumnDefinition copy;
+        return copy;
     }
 
     void CreateTable()
@@ -668,13 +1453,18 @@ public:
         std::cout << std::endl << "Number of Columns: " << this->numColumns;
     }
 
-    TableCreator() 
+    TableCreator()
     {
-        
+
     }
 
     ~TableCreator() {
-        delete[] this->tableName;
+        delete[] tableName;
+    }
+
+    TableCreator(const TableCreator& object)
+    {
+        this->SetTableName(object.tableName);
     }
 };
 
@@ -694,7 +1484,7 @@ public:
         this->queryString = newQueryString;
     }
 
-    void SetSelectedColumns(const char* columnName) 
+    void SetSelectedColumns(const char* columnName)
     {
         if (this->numColumns < MAX_COLUMNS)
         {
@@ -740,7 +1530,7 @@ public:
 
     QueryBuilder()
     {
-        
+
     }
 
     ~QueryBuilder()
@@ -760,48 +1550,184 @@ public:
     }
 };
 
+class TableConfig {
+private:
+    char* tableName;
+    char** columnNames;
+    int numColumns;
+
+public:
+    TableConfig(){}
+
+    TableConfig(const char* tableName, const char* columnNames[], int numColumns)
+        : numColumns(numColumns) {
+        this->tableName = new char[strlen(tableName) + 1];
+        strcpy(this->tableName, tableName);
+
+        this->columnNames = new char* [numColumns];
+        for (int i = 0; i < numColumns; ++i) {
+            this->columnNames[i] = new char[strlen(columnNames[i]) + 1];
+            strcpy(this->columnNames[i], columnNames[i]);
+        }
+    }
+
+    TableConfig(const char* tableName, const std::vector<std::string>& columnNames) {
+        this->tableName = new char[strlen(tableName) + 1];
+        strcpy(this->tableName, tableName);
+
+        this->numColumns = columnNames.size();
+
+        this->columnNames = new char*[numColumns];
+        for (size_t i = 0; i < numColumns; ++i) {
+            this->columnNames[i] = new char[columnNames[i].length() + 1];
+            strcpy(this->columnNames[i], columnNames[i].c_str());
+        }
+    }
+
+    TableConfig(const TableConfig& other) : numColumns(other.numColumns) {
+        tableName = new char[strlen(other.tableName) + 1];
+        strcpy(tableName, other.tableName);
+
+        columnNames = new char* [numColumns];
+        for (int i = 0; i < numColumns; ++i) {
+            columnNames[i] = new char[strlen(other.columnNames[i]) + 1];
+            strcpy(columnNames[i], other.columnNames[i]);
+        }
+    }
+
+    TableConfig& operator=(const TableConfig& other) {
+        if (this != &other) {
+            delete[] tableName;
+            for (int i = 0; i < numColumns; ++i) {
+                delete[] columnNames[i];
+            }
+            delete[] columnNames;
+
+            numColumns = other.numColumns;
+
+            tableName = new char[strlen(other.tableName) + 1];
+            strcpy(tableName, other.tableName);
+
+            columnNames = new char* [numColumns];
+            for (int i = 0; i < numColumns; ++i) {
+                columnNames[i] = new char[strlen(other.columnNames[i]) + 1];
+                strcpy(columnNames[i], other.columnNames[i]);
+            }
+        }
+        return *this;
+    }
+
+    ~TableConfig() {
+        delete[] this->tableName;
+        for (int i = 0; i < numColumns; ++i) {
+            delete[] this->columnNames[i];
+        }
+        delete[]this-> columnNames;
+    }
+
+    const char* getTableName()  { return this->tableName; }
+    const char** getColumnNames()  { return const_cast<const char**>(columnNames); }
+    int getNumColumns()  { return this->numColumns; }
+};
+
+class BinaryDataManager {
+public:
+    static void saveDataToFile(const std::string& fileName, const std::vector<char>& data) {
+        std::ofstream file(fileName, std::ios::out | std::ios::binary);
+        if (file.is_open()) {
+            file.write(data.data(), data.size());
+            file.close();
+        }
+        else {
+            std::cerr << "Error: Unable to open file " << fileName << " for writing" << std::endl;
+        }
+    }
+
+    static std::vector<char> readDataFromFile(const std::string& fileName) {
+        std::ifstream file(fileName, std::ios::in | std::ios::binary);
+        if (file.is_open()) {
+            file.seekg(0, std::ios::end);
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::vector<char> data(size);
+            if (file.read(data.data(), size)) {
+                file.close();
+                return data;
+            }
+            else {
+                std::cerr << "Error: Unable to read from file " << fileName << std::endl;
+            }
+        }
+        else {
+            std::cerr << "Error: Unable to open file " << fileName << " for reading" << std::endl;
+        }
+
+        return {};
+    }
+};
+
+class TableConfigManager :public TableConfig{
+private:
+    TableConfig* tableConfigs;
+    int numTables;
+
+public:
+    TableConfigManager() : tableConfigs(nullptr), numTables(0) {}
+
+    void loadTableConfigs(const char* fileNames[], int numFiles) {
+        numTables = numFiles;
+        tableConfigs = new TableConfig[numTables];
+
+        for (int i = 0; i < numTables; ++i) {
+            std::ifstream file(fileNames[i]);
+            if (file.is_open()) {
+                char tableName[100];
+                file >> tableName;
+
+                std::vector<char*> columnNames;
+                char columnName[100];
+                while (file >> columnName) {
+                    char* newColumnName = new char[strlen(columnName) + 1];
+                    strcpy(newColumnName, columnName);
+                    columnNames.push_back(newColumnName);
+                }
+
+               // tableConfigs[i] = TableConfig(tableName, columnNames.data(), columnNames.size());             DE REZOLVAT EROARE
+
+                for (char* columnNamePtr : columnNames) {
+                    delete[] columnNamePtr;
+                }
+            }
+            else {
+                std::cerr << "Error: Unable to open file " << fileNames[i] << std::endl;
+            }
+        }
+    }
+
+    void addTableConfig(const char* tableName, const char* columnNames[], int numColumns) {
+        TableConfig* newTableConfigs = new TableConfig[numTables + 1];
+        for (int i = 0; i < numTables; ++i) {
+            newTableConfigs[i] = tableConfigs[i];
+        }
+
+        newTableConfigs[numTables] = TableConfig(tableName, columnNames, numColumns);
+
+        delete[] tableConfigs;
+        tableConfigs = newTableConfigs;
+        ++numTables;
+    }
+
+    const TableConfig* getTableConfigs() const { return tableConfigs; }
+    int getNumTables() const { return numTables; }
+
+    ~TableConfigManager() {
+        delete[] this->tableConfigs;
+    }
+};
+
+
 int main()
 {
-    try {
-        CommandProcessor cmd1("CREATE TABLE employees (id INT, name TEXT, salary FLOAT);");
-        CommandProcessor cmd2("INSERT INTO employees VALUES (1, 'John Doe', 50000.0);");
-        CommandProcessor cmd3;
 
-        std::cout << "Initial Commands:" << std::endl;
-        std::cout << "cmd1: " << cmd1.GetCommandString() << std::endl;
-        std::cout << "cmd2: " << cmd2.GetCommandString() << std::endl;
-        std::cout << "cmd3: " << (cmd3.GetCommandString() ? cmd3.GetCommandString() : "Empty Command") << std::endl;
-
-        cmd3.SetCommandString("SELECT * FROM products;");
-        cmd3.IdentifyCommandType();
-        cmd3.ValidateCommand();
-        cmd3.DisplayCommandInfo();
-        cmd3.ExecuteCommand();
-
-        TableCreator myTable;
-        myTable.SetTableName("ExampleTable");
-        myTable.SetColumnDefinitions("Column1", "INT");
-        myTable.SetColumnDefinitions("Column2", "VARCHAR");
-
-        myTable.CreateTable();
-        myTable.DisplayTableInfo();
-
-        QueryBuilder myQuery;
-        myQuery.SetQueryString("SELECT");
-        myQuery.SetSelectedColumns("Column1");
-        myQuery.SetSelectedColumns("Column2");
-
-        myQuery.BuildQuery();
-        myQuery.DisplayQueryInfo();
-
-        QueryBuilder myQueryCopy(myQuery);
-        std::cout << "\nCopied Query:";
-        myQueryCopy.BuildQuery();
-        myQueryCopy.DisplayQueryInfo();
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
-    }
-    
-    return 0;
 }
