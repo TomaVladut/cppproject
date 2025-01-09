@@ -1,2 +1,2 @@
 # cppproject
-SQL Lite clone project for OOP Class.
+SQLite clone project for OOP Class.
